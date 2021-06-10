@@ -18,8 +18,21 @@
     <ClCompile Include="serv_main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\Downloads\server.cpp">
+    <ClCompile Include="readCsv.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="quiztest.csv">
+      <Filter>리소스 파일</Filter>
+    </None>
+    <None Include="quiztest_utf8.csv">
+      <Filter>리소스 파일</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="quizClass.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
