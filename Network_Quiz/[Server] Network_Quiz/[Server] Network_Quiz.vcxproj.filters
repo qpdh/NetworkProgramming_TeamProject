@@ -21,6 +21,9 @@
     <ClCompile Include="readCsv.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="server.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="quiztest.csv">
