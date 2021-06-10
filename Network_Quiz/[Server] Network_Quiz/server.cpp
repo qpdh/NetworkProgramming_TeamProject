@@ -6,6 +6,9 @@
 #include <windows.h>
 #include <process.h> 
 #include <iostream>
+
+#include "QuizClass.h"
+
 using namespace std;
 
 #define BUF_SIZE 100
@@ -29,6 +32,7 @@ bool clntReady[MAX_CLNT] = { true,false,false,false};
 
 int main(int argc, char* argv[])
 {
+	
 	WSADATA wsaData;
 	SOCKET hServSock, hClntSock;
 	SOCKADDR_IN servAdr, clntAdr;
@@ -83,12 +87,12 @@ unsigned WINAPI HandleClnt(void* arg)
 
 	switch (hClntCount) {
 	case 0:
-		send(hClntSock, "방장입니다.", BUF_SIZE, 0);
+		send(hClntSock, "방장입니다.\n", BUF_SIZE, 0);
 		break;
 	default:
 		msg[0] = hClntCount+1+'0';
 		msg[1] = 0;
-		strcat(msg, "번째 참가자");
+		strcat(msg, "번째 참가자\n");
 		cout << msg << endl;
 		send(hClntSock, msg, BUF_SIZE, 0);
 		break;
@@ -97,14 +101,15 @@ unsigned WINAPI HandleClnt(void* arg)
 	// 클라이언트로부터 메세지를 받은 후 처리 과정
 	while ((strLen = recv(hClntSock, msg, sizeof(msg), 0)) != 0) {
 		msg[strLen] = 0;
-
-		if (strcmp(msg, "[DEFAULT] start\n") == 0) {
-			cout << "start 입력됨" << endl;
-			ReadyCheck(clntCnt);
-			
+		
+		// 방장의 경우
+		if (hClntCount == 0 && strcmp(msg, "[DEFAULT] start\n") == 0) {
+				cout << "start 입력됨" << endl;
+				ReadyCheck(clntCnt);
 		}
-
-		else if (strcmp(msg, "[DEFAULT] ready\n") == 0) {
+		
+		// 다른 유저의 경우
+		else if (hClntCount != 0 && strcmp(msg, "[DEFAULT] ready\n") == 0) {
 			cout << "ready 입력됨" << endl;
 			cout << hClntCount << "번째 유저 준비 완료" << endl;
 			clntReady[hClntCount] = true;
@@ -149,16 +154,31 @@ void ReadyCheck(int hClntcnt) {
 		if (!clntReady[i]) {
 			WaitForSingleObject(hMutex, INFINITE);
 			for (i = 0; i < clntCnt; i++)
-				send(clntSocks[i], "모든 유저가 준비되지 않았습니다.", BUF_SIZE, 0);
+				send(clntSocks[i], "모든 유저가 준비되지 않았습니다.\n", BUF_SIZE, 0);
 
 			ReleaseMutex(hMutex);
 			return;
 
 		}
 	}
+
+	cout << "모든 유저 준비 완료" << endl;
 	WaitForSingleObject(hMutex, INFINITE);
-	for (int i = 0; i < clntCnt; i++)
-		send(clntSocks[i], "게임 시작", BUF_SIZE, 0);
+	for (int i = 0; i < clntCnt; i++) {
+		send(clntSocks[i], "게임 시작\n", BUF_SIZE, 0);
+
+		ReadCsv();
+
+		Quiz quiz= StartQuiz();
+		cout << quiz.getProblem() << endl;;
+
+		char msg[BUF_SIZE];
+		sprintf(msg, "[문제] %s\n", quiz.getProblem());
+
+		send(clntSocks[i],msg, BUF_SIZE, 0);
+		
+
+	}
 
 	ReleaseMutex(hMutex);
 

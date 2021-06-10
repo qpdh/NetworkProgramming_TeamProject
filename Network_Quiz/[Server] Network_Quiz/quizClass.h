@@ -1,6 +1,9 @@
 #pragma once
+
 #include <string>
 using namespace std;
+
+
 
 class QuizManagement {
 	int categoryNumber;
@@ -33,4 +36,13 @@ public:
 	void printTest() {
 		cout << quizNumber << " " << problem << " " << answer << " " << comment << endl;
 	}
+
+	char* getProblem() {
+		char* quizProblem = new char[problem.length()+1];
+		strcpy(quizProblem, problem.c_str());
+		return quizProblem;
+	}
 };
+
+void ReadCsv();
+Quiz StartQuiz();
