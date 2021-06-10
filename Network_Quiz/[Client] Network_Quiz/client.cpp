@@ -5,6 +5,8 @@
 #include <string.h>
 #include <windows.h>
 #include <process.h> 
+#include <iostream>
+using namespace std;
 
 #define BUF_SIZE 100
 #define NAME_SIZE 20
@@ -15,7 +17,9 @@ unsigned WINAPI SendMsg(void* arg);
 unsigned WINAPI RecvMsg(void* arg);
 void ErrorHandling(const char* msg);
 
-char name[NAME_SIZE] = "[DEFAULT]";
+//char name[NAME_SIZE] = "[DEFAULT]";
+string strName;
+
 char msg[BUF_SIZE];
 
 int main(int argc, char* argv[])
@@ -25,10 +29,17 @@ int main(int argc, char* argv[])
 	SOCKADDR_IN servAdr;
 	HANDLE hSndThread, hRcvThread;
 	
-	char inputName[NAME_SIZE];
-	printf("닉네임 입력 : ");
-	scanf("%s", inputName);
-	sprintf(name, "[%s]", inputName);
+	//char inputName[NAME_SIZE];
+	//printf("닉네임 입력 : ");
+	//scanf("%s", inputName);
+
+	string inputName;
+	cout << "닉네임 입력 : ";
+	cin >> inputName;
+	strName = "[" + inputName + "] ";
+
+
+	//sprintf(name, "[%s]", inputName);
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		ErrorHandling("WSAStartup() error!");
@@ -58,17 +69,21 @@ int main(int argc, char* argv[])
 unsigned WINAPI SendMsg(void* arg)   // send thread main
 {
 	SOCKET hSock = *((SOCKET*)arg);
-	char nameMsg[NAME_SIZE + BUF_SIZE];
+	string strNameMsg;
+	//char nameMsg[NAME_SIZE + BUF_SIZE];
 	while (1)
 	{
+
 		fgets(msg, BUF_SIZE, stdin);
 		if (!strcmp(msg, "q\n") || !strcmp(msg, "Q\n"))
 		{
 			closesocket(hSock);
 			exit(0);
 		}
-		sprintf(nameMsg, "%s %s", name, msg);
-		send(hSock, nameMsg, strlen(nameMsg), 0);
+		//sprintf(nameMsg, "%s %s", strName.c_str(), msg);
+		strNameMsg = strName + msg;
+		//cout << strNameMsg << endl;
+		send(hSock, strNameMsg.c_str(), strNameMsg.length(), 0);
 	}
 	return 0;
 }

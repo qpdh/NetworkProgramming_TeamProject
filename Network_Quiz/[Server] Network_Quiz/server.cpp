@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <process.h> 
 #include <iostream>
+#include <string>
 
 #include "QuizClass.h"
 
@@ -101,7 +102,12 @@ unsigned WINAPI HandleClnt(void* arg)
 	// 클라이언트로부터 메세지를 받은 후 처리 과정
 	while ((strLen = recv(hClntSock, msg, sizeof(msg), 0)) != 0) {
 		msg[strLen] = 0;
-		
+
+		// strMsg [이름] 이 잘린 메시지 빼오기
+		string strMsg = msg;
+		strMsg = strMsg.substr(strMsg.find(' '));
+		cout << "strMsg" << strMsg << endl;
+
 		// 방장의 경우
 		if (hClntCount == 0 && strcmp(msg, "[DEFAULT] start\n") == 0) {
 				cout << "start 입력됨" << endl;
@@ -175,7 +181,10 @@ void ReadyCheck(int hClntcnt) {
 		char msg[BUF_SIZE];
 		sprintf(msg, "[문제] %s\n", quiz.getProblem());
 
-		send(clntSocks[i],msg, BUF_SIZE, 0);
+		string nowProblem = "[문제] ";
+		nowProblem.append(quiz.getProblem());
+
+		send(clntSocks[i], nowProblem.c_str(), nowProblem.length(), 0);
 		
 
 	}

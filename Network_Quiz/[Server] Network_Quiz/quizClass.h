@@ -37,10 +37,11 @@ public:
 		cout << quizNumber << " " << problem << " " << answer << " " << comment << endl;
 	}
 
-	char* getProblem() {
+	const char* getProblem() {
 		char* quizProblem = new char[problem.length()+1];
 		strcpy(quizProblem, problem.c_str());
-		return quizProblem;
+		return problem.c_str();
+		//return quizProblem;
 	}
 };
 
