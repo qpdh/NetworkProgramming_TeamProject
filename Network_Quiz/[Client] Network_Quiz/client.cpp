@@ -25,6 +25,11 @@ int main(int argc, char* argv[])
 	SOCKADDR_IN servAdr;
 	HANDLE hSndThread, hRcvThread;
 	
+	char inputName[NAME_SIZE];
+	printf("닉네임 입력 : ");
+	scanf("%s", inputName);
+	sprintf(name, "[%s]", inputName);
+
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		ErrorHandling("WSAStartup() error!");
 	
