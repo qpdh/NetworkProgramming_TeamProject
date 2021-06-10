@@ -5,12 +5,15 @@
 #include <string.h>
 #include <windows.h>
 #include <process.h> 
+#include <iostream>
+using namespace std;
 
 #define BUF_SIZE 100
-#define MAX_CLNT 256
+#define MAX_CLNT 4
 
 unsigned WINAPI HandleClnt(void* arg);
 void SendMsg(char* msg, int len);
+void ReadyCheck(int hClntcnt);
 
 int clntCnt = 0;
 
@@ -21,6 +24,8 @@ SOCKET clntSocks[MAX_CLNT];
 HANDLE hMutex;
 
 #pragma comment(lib, "ws2_32.lib")
+
+bool clntReady[MAX_CLNT] = { true,false,false,false};
 
 int main(int argc, char* argv[])
 {
@@ -42,23 +47,25 @@ int main(int argc, char* argv[])
 
 	bind(hServSock, (SOCKADDR*)&servAdr, sizeof(servAdr));
 
-	listen(hServSock, 5);
+	listen(hServSock, 3);
 
-	while (1)
+	while(clntCnt<MAX_CLNT)
 	{
 		clntAdrSz = sizeof(clntAdr);
 		hClntSock = accept(hServSock, (SOCKADDR*)&clntAdr, &clntAdrSz);
-
+		
 		// Socket 동기화
 		WaitForSingleObject(hMutex, INFINITE);
+
 		//Socket이 연결된 이후 Socket 배열에 추가
 		clntSocks[clntCnt++] = hClntSock;
 		ReleaseMutex(hMutex);
-
+		cout << "현재 접속자 수" << clntCnt << endl;
 		hThread =
 			(HANDLE)_beginthreadex(NULL, 0, HandleClnt, (void*)&hClntSock, 0, NULL);
 		printf("Connected client IP: %s:%d \n", inet_ntoa(clntAdr.sin_addr), htons(clntAdr.sin_port));
 	}
+
 	closesocket(hServSock);
 	WSACleanup();
 	return 0;
@@ -67,12 +74,45 @@ int main(int argc, char* argv[])
 unsigned WINAPI HandleClnt(void* arg)
 {
 	SOCKET hClntSock = *((SOCKET*)arg);
+
+	// 임계영역 //////////////
+	int hClntCount = clntCnt-1;
+	//////////////////////////
 	int strLen = 0, i;
 	char msg[BUF_SIZE];
 
+	switch (hClntCount) {
+	case 0:
+		send(hClntSock, "방장입니다.", BUF_SIZE, 0);
+		break;
+	default:
+		msg[0] = hClntCount+1+'0';
+		msg[1] = 0;
+		strcat(msg, "번째 참가자");
+		cout << msg << endl;
+		send(hClntSock, msg, BUF_SIZE, 0);
+		break;
+	}
+
 	// 클라이언트로부터 메세지를 받은 후 처리 과정
-	while ((strLen = recv(hClntSock, msg, sizeof(msg), 0)) != 0)
-		SendMsg(msg, strLen);
+	while ((strLen = recv(hClntSock, msg, sizeof(msg), 0)) != 0) {
+		msg[strLen] = 0;
+
+		if (strcmp(msg, "[DEFAULT] start\n") == 0) {
+			cout << "start 입력됨" << endl;
+			ReadyCheck(clntCnt);
+			
+		}
+
+		else if (strcmp(msg, "[DEFAULT] ready\n") == 0) {
+			cout << "ready 입력됨" << endl;
+			cout << hClntCount << "번째 유저 준비 완료" << endl;
+			clntReady[hClntCount] = true;
+		}
+
+		else
+			SendMsg(msg, strLen);
+	}
 
 	// 클라이언트 연결 해제의 동기화
 	WaitForSingleObject(hMutex, INFINITE);
@@ -102,4 +142,24 @@ void SendMsg(char* msg, int len)   // send to all
 		send(clntSocks[i], msg, len, 0);
 
 	ReleaseMutex(hMutex);
+}
+
+void ReadyCheck(int hClntcnt) {
+	for (int i = 0; i < clntCnt; i++) {
+		if (!clntReady[i]) {
+			WaitForSingleObject(hMutex, INFINITE);
+			for (i = 0; i < clntCnt; i++)
+				send(clntSocks[i], "모든 유저가 준비되지 않았습니다.", BUF_SIZE, 0);
+
+			ReleaseMutex(hMutex);
+			return;
+
+		}
+	}
+	WaitForSingleObject(hMutex, INFINITE);
+	for (int i = 0; i < clntCnt; i++)
+		send(clntSocks[i], "게임 시작", BUF_SIZE, 0);
+
+	ReleaseMutex(hMutex);
+
 }

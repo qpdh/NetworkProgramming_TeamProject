@@ -12,20 +12,25 @@ public:
 		this->categoryNumber = categoryNumber;
 		this->quizType = quizType;
 		this->numOfQuiz = numOfQuiz;
+
 	}
 	
 };
 
 class Quiz {
-	int quizNumber;
+	string quizNumber;
 	string problem;
 	string answer;
 	string comment;
 public:
-	Quiz(int quizNumber, string problem, string answer, string comment) {
+	Quiz(string quizNumber, string problem, string answer, string comment) {
 		this->quizNumber = quizNumber;
 		this->problem = problem;
 		this->answer = answer;
 		this->comment = comment;
+	}
+
+	void printTest() {
+		cout << quizNumber << " " << problem << " " << answer << " " << comment << endl;
 	}
 };
