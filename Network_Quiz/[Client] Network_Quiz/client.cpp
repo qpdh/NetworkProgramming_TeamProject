@@ -84,7 +84,9 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
 		if (strLen == -1)
 			return -1;
 		nameMsg[strLen] = 0;
-		fputs(nameMsg, stdout);
+		printf("<<%s", nameMsg);
+		//fputs(nameMsg, stdout);
+		printf(">>");
 	}
 	return 0;
 }
