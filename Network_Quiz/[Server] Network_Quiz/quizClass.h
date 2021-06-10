@@ -38,10 +38,11 @@ public:
 	}
 
 	const char* getProblem() {
-		char* quizProblem = new char[problem.length()+1];
-		strcpy(quizProblem, problem.c_str());
 		return problem.c_str();
-		//return quizProblem;
+	}
+
+	const char* getAnswer() {
+		return answer.c_str();
 	}
 };
 
