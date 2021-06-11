@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include <stdio.h>
@@ -5,6 +6,10 @@
 #include <process.h>
 #include <WinSock2.h>
 #include <Windows.h>
+#include <vector>
+#include <iostream>
+
+using namespace std;
 
 #pragma comment(lib,"ws2_32.lib")
 
@@ -28,6 +33,8 @@ typedef struct {
 DWORD WINAPI EchoThreadMain(LPVOID CompletionPortIO);
 
 static int nThreadNum = 1;
+
+vector<SOCKET> vectorSOCKET;
 
 int main() {
 	WSADATA wsaData;
@@ -78,6 +85,9 @@ int main() {
 		ioInfo->wsaBuf.buf = ioInfo->buffer;
 		ioInfo->rwMode = READ;
 
+		// vector 클라이언트 소켓 추가
+		vectorSOCKET.push_back(hClntSock);
+
 		// &info->overlapped  info 전체 주소 전달
 		WSARecv(handleInfo->hClntSock, &(ioInfo->wsaBuf), 1, &recvBytes, &flags, &(ioInfo->overlapped), NULL);
 	}
@@ -104,16 +114,43 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 		if (ioInfo->rwMode == READ) {
 			printf("%d : received!\n", nNum);
 
-			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-			ioInfo->wsaBuf.len = bytesTrans;
-			ioInfo->rwMode = WRITE;
-			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+			//모두에게 보내기
+			char* tmp = new char[ioInfo->wsaBuf.len];
+			strcpy(tmp, ioInfo->buffer);
+
+			free(ioInfo);
+
+			for (int i = 0; i < vectorSOCKET.size(); i++) {
+				ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+				memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+
+				ioInfo->wsaBuf.len = bytesTrans;
+				ioInfo->wsaBuf.buf = tmp;
+				ioInfo->rwMode = WRITE;
+				WSASend(vectorSOCKET.at(i), &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+			}
+
+			//memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+			//ioInfo->wsaBuf.len = bytesTrans;
+
+			//ioInfo->wsaBuf.buf = ioInfo->buffer;
+
+			//ioInfo->rwMode = WRITE;
+
+			cout << "벡터 크기 : " << vectorSOCKET.size() << endl;
+			//WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+			
+
+
+
 
 			ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+
 			ioInfo->wsaBuf.len = BUF_SIZE;
 			ioInfo->wsaBuf.buf = ioInfo->buffer;
 			ioInfo->rwMode = READ;
+
 			WSARecv(sock, &(ioInfo->wsaBuf), 1, NULL, &flags, &(ioInfo->overlapped), NULL);
 		}
 		else {
