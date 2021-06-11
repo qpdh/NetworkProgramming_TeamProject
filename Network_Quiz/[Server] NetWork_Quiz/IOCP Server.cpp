@@ -50,6 +50,7 @@ int main() {
 	for (int i = 0; i < MAX_ROOM; i++) {
 		vectorRoom.push_back(vector<SOCKET>());
 	}
+
 	WSADATA wsaData;
 	HANDLE hComPort;
 	SYSTEM_INFO sysInfo;
