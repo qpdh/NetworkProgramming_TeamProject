@@ -5,10 +5,11 @@
 #include <string.h>
 #include <windows.h>
 #include <process.h> 
+#include <string>
 #include <iostream>
 using namespace std;
 
-#define BUF_SIZE 100
+#define BUF_SIZE 1024
 #define NAME_SIZE 20
 
 #pragma comment(lib, "ws2_32.lib")
@@ -51,7 +52,6 @@ int main(int argc, char* argv[])
     }
     strName = "[" + inputName + "] ";
 
-
     //sprintf(name, "[%s]", inputName);
 
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -90,13 +90,16 @@ unsigned WINAPI SendMsg(void* arg)   // send thread main
     string msg;
     while (1)
     {
-        cin >> msg;
+        
+        getline(cin,msg);
+        if (msg == "\0")
+            continue;
+        //cin >> msg;
         if (msg == "/q"|| msg == "/Q")
         {
            strNameMsg = strName + "종료";
-           cout << "서버와의 연결을 종료합니다.\n";
-           send(hSock, strNameMsg.c_str(), strNameMsg.length(), 0);
-           return 0;
+           cout << "서버와의 연결을 종료합니다." << endl;
+           exit(0);
         }
         strNameMsg = strName + msg;
         send(hSock, strNameMsg.c_str(), strNameMsg.length(), 0);

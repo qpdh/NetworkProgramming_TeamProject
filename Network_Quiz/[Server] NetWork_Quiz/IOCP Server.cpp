@@ -8,14 +8,17 @@
 #include <Windows.h>
 #include <vector>
 #include <iostream>
+#include <string>
+#include <sstream>
 
 using namespace std;
 
 #pragma comment(lib,"ws2_32.lib")
 
-#define BUF_SIZE 100
+#define BUF_SIZE 1024
 #define READ 3
 #define WRITE 5
+#define MAX_ROOM 4
 
 typedef struct {
 	SOCKET hClntSock;
@@ -35,8 +38,18 @@ DWORD WINAPI EchoThreadMain(LPVOID CompletionPortIO);
 static int nThreadNum = 1;
 
 vector<SOCKET> vectorSOCKET;
+vector<vector<SOCKET>> vectorRoom;
+
+string PrintRoomInfo();
+// 송신자를 제외한 모든 클라이언트에게 보내기
+void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer);
+// 송신자를 포함한 모든 클라이언트에게 보내기
+void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer);
 
 int main() {
+	for (int i = 0; i < MAX_ROOM; i++) {
+		vectorRoom.push_back(vector<SOCKET>());
+	}
 	WSADATA wsaData;
 	HANDLE hComPort;
 	SYSTEM_INFO sysInfo;
@@ -73,6 +86,9 @@ int main() {
 
 		hClntSock = accept(hServSock, (SOCKADDR*)&clntAdr, &addrLen);
 
+		cout << "현재 접속자 수 : " << vectorSOCKET.size()+1 << endl;
+		PrintRoomInfo();
+
 		handleInfo = (LPPER_HANDLE_DATA)malloc(sizeof(PER_HANDLE_DATA));
 		handleInfo->hClntSock = hClntSock;
 		memcpy(&(handleInfo->clntAdr), &clntAdr, addrLen);
@@ -87,6 +103,17 @@ int main() {
 
 		// vector 클라이언트 소켓 추가
 		vectorSOCKET.push_back(hClntSock);
+
+		// 화면 초기화
+		char tmp5[14] = "[Server] /cls";
+		SendMessageAllClients(14, tmp5);
+
+		// 방 정보 보내기
+		string strRoomInfo = PrintRoomInfo();
+		char* charRoomInfo = new char[strRoomInfo.length()];
+		strcpy(charRoomInfo, strRoomInfo.c_str());
+
+		SendMessageAllClients(strRoomInfo.length(), charRoomInfo);
 
 		// &info->overlapped  info 전체 주소 전달
 		WSARecv(handleInfo->hClntSock, &(ioInfo->wsaBuf), 1, &recvBytes, &flags, &(ioInfo->overlapped), NULL);
@@ -113,25 +140,59 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 
 		if (ioInfo->rwMode == READ) {
 			printf("%d : received!\n", nNum);
-
-			//모두에게 보내기
-			char* tmp = new char[ioInfo->wsaBuf.len];
-			strcpy(tmp, ioInfo->buffer);
-
-			free(ioInfo);
-
-			for (int i = 0; i < vectorSOCKET.size(); i++) {
-				ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
-				memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-
-				ioInfo->wsaBuf.len = bytesTrans;
-				ioInfo->wsaBuf.buf = tmp;
-				ioInfo->rwMode = WRITE;
-				WSASend(vectorSOCKET.at(i), &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+			
+			// 클라이언트가 접속 종료시 처리
+			if (bytesTrans == 0) {
+				closesocket(sock);
+				free(handleInfo);
+				free(ioInfo);
+				auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
+				vectorSOCKET.erase(it);
+				continue;
 			}
 
-			cout << "벡터 크기 : " << vectorSOCKET.size() << endl;
-			
+
+
+			// 송신자를 제외한 모두에게 보내기
+			//char* charMessageFromClient = new char[ioInfo->wsaBuf.len];
+			char* charMessageFromClient = new char[strlen(ioInfo->buffer)];
+			strcpy(charMessageFromClient, ioInfo->buffer);
+			free(ioInfo);
+
+			///////////////////////////
+			//입력 값 검증
+			//명령어 인가?
+			// 클라이언트가 보낸 메시지 
+			// string strMessageFromClient
+			//
+			charMessageFromClient[bytesTrans] = 0;
+			string strMessageFromClient = charMessageFromClient;
+
+			// 이름 부분 자르기
+			strMessageFromClient = strMessageFromClient.substr(strMessageFromClient.find(" ") + 1);
+			//cout << "클라이언트로 부터 메시지 : " << strMessageFromClient << endl;
+
+			if (strMessageFromClient[0] == '/') {
+				cout << "클라이언트로 부터 명령어 입력입니다." << endl;
+				// 명령어 분리하기
+				// 
+				// 2번째 공백 위치
+				// ex /test1 test2 -> test
+				istringstream CommandSpliter(strMessageFromClient);
+				vector<string> commandSplit;
+				string stringBuffer;
+				while (getline(CommandSpliter, stringBuffer, ' ')) {
+					commandSplit.push_back(stringBuffer);
+				}
+				cout << "입력된 명령어 : " << commandSplit.at(0) << endl;
+			}
+
+			else {
+				SendMessageOtherClients(sock, bytesTrans, charMessageFromClient);
+			}
+
+
+
 			ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
 
@@ -148,4 +209,48 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 
 	}
 	return 0;
+}
+// 송신자를 제외한 모든 클라이언트에게 보내기
+void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer) {
+	//모두에게 보내기
+
+	for (int i = 0; i < vectorSOCKET.size(); i++) {
+		if (memcmp(&sock, &vectorSOCKET.at(i), sizeof(SOCKET)) != 0) {
+			LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+
+			ioInfo->wsaBuf.len = bytesTrans;
+			ioInfo->wsaBuf.buf = messageBuffer;
+			ioInfo->rwMode = WRITE;
+			WSASend(vectorSOCKET.at(i), &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+
+		}
+	}
+}
+
+// 송신자를 포함한 모든 클라이언트에게 보내기
+void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer) {
+	//모두에게 보내기
+
+	for (int i = 0; i < vectorSOCKET.size(); i++) {
+			LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+
+			ioInfo->wsaBuf.len = bytesTrans;
+			ioInfo->wsaBuf.buf = messageBuffer;
+			ioInfo->rwMode = WRITE;
+			WSASend(vectorSOCKET.at(i), &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+	}
+}
+
+// 방 번호를 출력
+string PrintRoomInfo() {
+	string roomStr="";
+	for (int i = 0; i < MAX_ROOM; i++) {
+		roomStr += to_string(i + 1) + "번 방 || 인원 수 " + to_string(vectorRoom.at(i).size())+"/4\n";
+
+		//cout << i + 1 << "번 방 || 인원 수 " << vectorRoom.at(i).size() << "/4" << endl;
+	}
+	cout << roomStr << endl;
+	return roomStr;
 }
