@@ -28,14 +28,27 @@ int main(int argc, char* argv[])
 	SOCKET hSock;
 	SOCKADDR_IN servAdr;
 	HANDLE hSndThread, hRcvThread;
-	
+	char IP[100];
+	int PORT;
+
+	cout << "아이피주소 설정 >> ";
+	cin >> IP;
+	cout << "포트 설정 >> ";
+	cin >> PORT;
+
 	//char inputName[NAME_SIZE];
 	//printf("닉네임 입력 : ");
 	//scanf("%s", inputName);
 
-	string inputName;
-	cout << "닉네임 입력 : ";
-	cin >> inputName;
+	string inputName = "default nick";
+	while (true) {
+		cout << "닉네임 입력 : ";
+		cin >> inputName;
+		if (inputName == "Server")
+			cout << "Server로 닉네임을 설정할 수 없습니다.\n";
+		else
+			break;
+	}
 	strName = "[" + inputName + "] ";
 
 
@@ -43,13 +56,13 @@ int main(int argc, char* argv[])
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		ErrorHandling("WSAStartup() error!");
-	
+
 	hSock = socket(PF_INET, SOCK_STREAM, 0);
 
 	memset(&servAdr, 0, sizeof(servAdr));
 	servAdr.sin_family = AF_INET;
-	servAdr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	servAdr.sin_port = htons(20000);
+	servAdr.sin_addr.s_addr = inet_addr(IP);
+	servAdr.sin_port = htons(PORT);
 
 	if (connect(hSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)
 		ErrorHandling("connect() error");
@@ -73,12 +86,11 @@ unsigned WINAPI SendMsg(void* arg)   // send thread main
 	//char nameMsg[NAME_SIZE + BUF_SIZE];
 	while (1)
 	{
-
 		fgets(msg, BUF_SIZE, stdin);
-		if (!strcmp(msg, "q\n") || !strcmp(msg, "Q\n"))
+		if (!strcmp(msg, "/q\n") || !strcmp(msg, "/Q\n"))
 		{
-			closesocket(hSock);
-			exit(0);
+			cout << "서버와의 연결을 종료합니다.\n";
+			return 0;
 		}
 		//sprintf(nameMsg, "%s %s", strName.c_str(), msg);
 		strNameMsg = strName + msg;
@@ -99,18 +111,13 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
 		if (strLen == -1)
 			return -1;
 		nameMsg[strLen] = 0;
-		//printf("<<%s", nameMsg);
-
-		if (strcmp(nameMsg, "[Server] /cls\n")==0)
+		if (!strcmp(nameMsg, "[Server] /cls\n"))
 			system("cls");
 		else {
-			//printf("%s\n", nameMsg);
-			fputs(nameMsg, stdout);
+			printf("<<%s", nameMsg);
 			//fputs(nameMsg, stdout);
+			printf(">>");
 		}
-
-
-
 	}
 	return 0;
 }
