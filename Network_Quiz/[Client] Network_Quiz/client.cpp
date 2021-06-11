@@ -99,7 +99,18 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
 		if (strLen == -1)
 			return -1;
 		nameMsg[strLen] = 0;
-		printf("<<%s", nameMsg);
+		//printf("<<%s", nameMsg);
+
+		if (strcmp(nameMsg, "[Server] /cls\n")==0)
+			system("cls");
+		else {
+			nameMsg[strLen] = 0;
+			printf("<<%s", nameMsg);
+			//fputs(nameMsg, stdout);
+			printf(">>");
+		}
+
+
 		//fputs(nameMsg, stdout);
 		printf(">>");
 	}
