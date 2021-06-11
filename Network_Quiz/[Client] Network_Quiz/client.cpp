@@ -28,7 +28,14 @@ int main(int argc, char* argv[])
 	SOCKET hSock;
 	SOCKADDR_IN servAdr;
 	HANDLE hSndThread, hRcvThread;
-	
+	char IP[100];
+	int PORT;
+
+	cout << "아이피주소 설정 >> ";
+	cin >> IP;
+	cout << "포트 설정 >> ";
+	cin >> PORT;
+
 	//char inputName[NAME_SIZE];
 	//printf("닉네임 입력 : ");
 	//scanf("%s", inputName);
@@ -43,13 +50,13 @@ int main(int argc, char* argv[])
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		ErrorHandling("WSAStartup() error!");
-	
+
 	hSock = socket(PF_INET, SOCK_STREAM, 0);
 
 	memset(&servAdr, 0, sizeof(servAdr));
 	servAdr.sin_family = AF_INET;
-	servAdr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	servAdr.sin_port = htons(20000);
+	servAdr.sin_addr.s_addr = inet_addr(IP);
+	servAdr.sin_port = htons(PORT);
 
 	if (connect(hSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)
 		ErrorHandling("connect() error");
@@ -99,20 +106,13 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
 		if (strLen == -1)
 			return -1;
 		nameMsg[strLen] = 0;
-		//printf("<<%s", nameMsg);
-
-		if (strcmp(nameMsg, "[Server] /cls\n")==0)
+		if (strcmp(nameMsg, "[Server] /cls\n") == 0)
 			system("cls");
 		else {
-			nameMsg[strLen] = 0;
 			printf("<<%s", nameMsg);
 			//fputs(nameMsg, stdout);
 			printf(">>");
 		}
-
-
-		//fputs(nameMsg, stdout);
-		printf(">>");
 	}
 	return 0;
 }
