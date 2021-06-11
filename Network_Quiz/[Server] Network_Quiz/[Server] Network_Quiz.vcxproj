@@ -145,11 +145,13 @@
     <ClCompile Include="serv_main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="QuizClass.h" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="quiztest.csv" />
     <None Include="quiztest_utf8.csv" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="QuizClass.h" />
+    <ClInclude Include="RoomManagement.h" />
+    <ClInclude Include="ScoreManagement.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

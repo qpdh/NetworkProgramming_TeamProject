@@ -1,9 +1,4 @@
-#pragma once
-
-#include <string>
 using namespace std;
-
-
 
 class QuizManagement {
 	int categoryNumber;
@@ -17,7 +12,7 @@ public:
 		this->numOfQuiz = numOfQuiz;
 
 	}
-	
+
 };
 
 class Quiz {
