@@ -130,20 +130,8 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 				WSASend(vectorSOCKET.at(i), &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 			}
 
-			//memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-			//ioInfo->wsaBuf.len = bytesTrans;
-
-			//ioInfo->wsaBuf.buf = ioInfo->buffer;
-
-			//ioInfo->rwMode = WRITE;
-
 			cout << "º¤ÅÍ Å©±â : " << vectorSOCKET.size() << endl;
-			//WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 			
-
-
-
-
 			ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
 
