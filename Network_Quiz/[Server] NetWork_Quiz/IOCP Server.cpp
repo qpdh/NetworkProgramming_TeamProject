@@ -48,7 +48,7 @@ void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer)
 void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer);
 //함수 선언
 void commandCompare(SOCKET sock, vector<string> commandSplit);
-void joinRoom(SOCKET sock);
+int joinRoom(SOCKET sock, vector<string> commandSplit);
 
 int main() {
 	for (int i = 0; i < MAX_ROOM; i++) {
@@ -272,7 +272,7 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 		cout << "help 입력" << endl;
 	else if (commandSplit.at(0) == "/join") {
 		cout << "join 입력" << endl;
-		joinRoom(sock);	//방 입장
+		joinRoom(sock, commandSplit);	//방 입장
 	}
 	else if (commandSplit.at(0) == "/q" || commandSplit.at(0) == "/Q")
 		cout << "q or Q 입력" << endl;
@@ -282,32 +282,17 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 		cout << "start 입력" << endl;
 }
 
-void joinRoom(SOCKET sock) {
-	string ask = "몇 번 방에 들어가시겠습니까?";
-	char roomNumRecv[BUF_SIZE];
-	int roomNum;
-	DWORD flags = 0;
-	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+int joinRoom(SOCKET sock, vector<string> commandSplit) {
+	int roomNum = stoi(commandSplit.at(1));
 
-	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-	ioInfo->wsaBuf.len = BUF_SIZE;
-	ioInfo->wsaBuf.buf = roomNumRecv;
-	ioInfo->rwMode = WRITE;
-
-	while (true) {
-		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL); //몇 번 방에 들어가시겠습니까? 보내려고 함
-		WSARecv(sock, &(ioInfo->wsaBuf), 1, NULL, &flags, &(ioInfo->overlapped), NULL); //방 번호 roomNumRecv 배열에 입력 받으려고함(숫자로)
-		roomNum = atoi(roomNumRecv) - 1;
-		if (((roomNum > -1) && (roomNum < MAX_ROOM)) && (vectorRoom.at(roomNum).size() < MAX_ROOM_CLNTNUM)) {
-			auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
-			SOCKET temp = vectorSOCKET.at(it - vectorSOCKET.begin());
-			vectorRoom[roomNum].push_back(temp);
-			vectorSOCKET.erase(it);
-			break;
-		}
-		else {
-			if(vectorRoom.at(roomNum).size() > MAX_ROOM_CLNTNUM)
-				WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL); //방이 꽉 찼다고 보냄
-		}
+	if (((roomNum > -1) && (roomNum < MAX_ROOM)) && (vectorRoom.at(roomNum).size() < MAX_ROOM_CLNTNUM)) {
+		auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
+		SOCKET temp = vectorSOCKET.at(it - vectorSOCKET.begin());
+		vectorRoom[roomNum].push_back(temp);
+		vectorSOCKET.erase(it);
+	}
+	else {
+		if (vectorRoom.at(roomNum).size() > MAX_ROOM_CLNTNUM)
+			; //클라이언트에게 방이 꽉 찼다고 보냄
 	}
 }
