@@ -18,7 +18,8 @@ using namespace std;
 #define BUF_SIZE 1024
 #define READ 3
 #define WRITE 5
-#define MAX_ROOM 4
+#define MAX_ROOM 5
+#define MAX_ROOM_CLNTNUM 4
 
 typedef struct {
 	SOCKET hClntSock;
@@ -46,7 +47,8 @@ void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer)
 // 송신자를 포함한 모든 클라이언트에게 보내기
 void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer);
 //함수 선언
-void commandCompare(vector<string> commandSplit);
+void commandCompare(SOCKET sock, vector<string> commandSplit);
+void joinRoom(SOCKET sock);
 
 int main() {
 	for (int i = 0; i < MAX_ROOM; i++) {
@@ -191,7 +193,7 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 
 
 				//중간 함수부분
-				commandCompare(commandSplit);
+				commandCompare(sock, commandSplit);
 			}
 
 			else {
@@ -265,15 +267,47 @@ string PrintRoomInfo() {
 
 
 //함수 구현
-void commandCompare(vector<string> commandSplit) {
-	if (commandSplit.at(0) == "help")
+void commandCompare(SOCKET sock, vector<string> commandSplit) {
+	if (commandSplit.at(0) == "/help")
 		cout << "help 입력" << endl;
-	else if (commandSplit.at(0) == "/join")
+	else if (commandSplit.at(0) == "/join") {
 		cout << "join 입력" << endl;
+		joinRoom(sock);	//방 입장
+	}
 	else if (commandSplit.at(0) == "/q" || commandSplit.at(0) == "/Q")
 		cout << "q or Q 입력" << endl;
 	else if (commandSplit.at(0) == "/ready")
 		cout << "ready 입력" << endl;
 	else if (commandSplit.at(0) == "/start")
 		cout << "start 입력" << endl;
+}
+
+void joinRoom(SOCKET sock) {
+	string ask = "몇 번 방에 들어가시겠습니까?";
+	char roomNumRecv[BUF_SIZE];
+	int roomNum;
+	DWORD flags = 0;
+	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+
+	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+	ioInfo->wsaBuf.len = BUF_SIZE;
+	ioInfo->wsaBuf.buf = roomNumRecv;
+	ioInfo->rwMode = WRITE;
+
+	while (true) {
+		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL); //몇 번 방에 들어가시겠습니까? 보내려고 함
+		WSARecv(sock, &(ioInfo->wsaBuf), 1, NULL, &flags, &(ioInfo->overlapped), NULL); //방 번호 roomNumRecv 배열에 입력 받으려고함(숫자로)
+		roomNum = atoi(roomNumRecv) - 1;
+		if (((roomNum > -1) && (roomNum < MAX_ROOM)) && (vectorRoom.at(roomNum).size() < MAX_ROOM_CLNTNUM)) {
+			auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
+			SOCKET temp = vectorSOCKET.at(it - vectorSOCKET.begin());
+			vectorRoom[roomNum].push_back(temp);
+			vectorSOCKET.erase(it);
+			break;
+		}
+		else {
+			if(vectorRoom.at(roomNum).size() > MAX_ROOM_CLNTNUM)
+				WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL); //방이 꽉 찼다고 보냄
+		}
+	}
 }
