@@ -45,6 +45,8 @@ string PrintRoomInfo();
 void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer);
 // 송신자를 포함한 모든 클라이언트에게 보내기
 void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer);
+//함수 선언
+void commandCompare(vector<string> commandSplit);
 
 int main() {
 	for (int i = 0; i < MAX_ROOM; i++) {
@@ -186,6 +188,10 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 					commandSplit.push_back(stringBuffer);
 				}
 				cout << "입력된 명령어 : " << commandSplit.at(0) << endl;
+
+
+				//중간 함수부분
+				commandCompare(commandSplit);
 			}
 
 			else {
@@ -254,4 +260,20 @@ string PrintRoomInfo() {
 	}
 	cout << roomStr << endl;
 	return roomStr;
+}
+
+
+
+//함수 구현
+void commandCompare(vector<string> commandSplit) {
+	if (commandSplit.at(0) == "help")
+		cout << "help 입력" << endl;
+	else if (commandSplit.at(0) == "/join")
+		cout << "join 입력" << endl;
+	else if (commandSplit.at(0) == "/q" || commandSplit.at(0) == "/Q")
+		cout << "q or Q 입력" << endl;
+	else if (commandSplit.at(0) == "/ready")
+		cout << "ready 입력" << endl;
+	else if (commandSplit.at(0) == "/start")
+		cout << "start 입력" << endl;
 }
