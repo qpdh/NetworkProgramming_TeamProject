@@ -71,6 +71,10 @@ int main(int argc, char* argv[])
 		(HANDLE)_beginthreadex(NULL, 0, SendMsg, (void*)&hSock, 0, NULL);
 	hRcvThread =
 		(HANDLE)_beginthreadex(NULL, 0, RecvMsg, (void*)&hSock, 0, NULL);
+	
+	cout << "立加 己傍\n";
+	string loginMsg = "[" + strName + "] 立加";
+	send(hSock, loginMsg.c_str(), loginMsg.length(), 0);
 
 	WaitForSingleObject(hSndThread, INFINITE);
 	WaitForSingleObject(hRcvThread, INFINITE);
@@ -114,7 +118,7 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
 		if (!strcmp(nameMsg, "[Server] /cls\n"))
 			system("cls");
 		else {
-			printf("<<%s", nameMsg);
+			printf("%s>>", nameMsg);
 			//fputs(nameMsg, stdout);
 			printf(">>");
 		}
