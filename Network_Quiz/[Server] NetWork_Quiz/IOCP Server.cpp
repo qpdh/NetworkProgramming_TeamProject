@@ -41,14 +41,18 @@ static int nThreadNum = 1;
 vector<SOCKET> vectorSOCKET;
 vector<vector<SOCKET>> vectorRoom;
 
+// 방 번호 출력
 string PrintRoomInfo();
 // 송신자를 제외한 모든 클라이언트에게 보내기
 void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer);
 // 송신자를 포함한 모든 클라이언트에게 보내기
 void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer);
-//함수 선언
+// 명령어 비교(/ + 명령어)
 void commandCompare(SOCKET sock, vector<string> commandSplit);
-int joinRoom(SOCKET sock, vector<string> commandSplit);
+// 방 입장
+void joinRoom(SOCKET sock, vector<string> commandSplit);
+// 명령어 설명 출력(/help)
+void printCommand(SOCKET sock);
 
 int main() {
 	for (int i = 0; i < MAX_ROOM; i++) {
@@ -264,12 +268,12 @@ string PrintRoomInfo() {
 	return roomStr;
 }
 
-
-
-//함수 구현
+//명령어 비교(/ + 명령어)
 void commandCompare(SOCKET sock, vector<string> commandSplit) {
-	if (commandSplit.at(0) == "/help")
+	if (commandSplit.at(0) == "/help") {
 		cout << "help 입력" << endl;
+		printCommand(sock);
+	}
 	else if (commandSplit.at(0) == "/join") {
 		cout << "join 입력" << endl;
 		joinRoom(sock, commandSplit);	//방 입장
@@ -282,7 +286,19 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 		cout << "start 입력" << endl;
 }
 
-int joinRoom(SOCKET sock, vector<string> commandSplit) {
+//명령어 설명 출력(/help)
+void printCommand(SOCKET sock) {
+	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+	char msg[] = "/help : 명령어 설명\n/join 숫자 : 해당 숫자 방 입장\n/q or /Q : 종료\n/ready : 입장한 방에서 준비\n/start : 방장이 게임 시작";
+	ioInfo->wsaBuf.len = strlen(msg);
+	ioInfo->wsaBuf.buf = msg;
+	ioInfo->rwMode = WRITE;
+	WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+}
+
+//방 입장
+void joinRoom(SOCKET sock, vector<string> commandSplit) {
 	int roomNum = stoi(commandSplit.at(1));
 
 	///////////////////////////////
@@ -316,5 +332,4 @@ int joinRoom(SOCKET sock, vector<string> commandSplit) {
 		}
 
 	}
-	return 0;
 }
