@@ -285,14 +285,36 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 int joinRoom(SOCKET sock, vector<string> commandSplit) {
 	int roomNum = stoi(commandSplit.at(1));
 
+	///////////////////////////////
+	// 방 꽉채우기 위한 테스트용 //
+	///////////////////////////////
+	vectorRoom.at(0).push_back(sock);
+	vectorRoom.at(0).push_back(sock);
+	vectorRoom.at(0).push_back(sock);
+	vectorRoom.at(0).push_back(sock);
+
+
 	if (((roomNum > -1) && (roomNum < MAX_ROOM)) && (vectorRoom.at(roomNum).size() < MAX_ROOM_CLNTNUM)) {
 		auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
 		SOCKET temp = vectorSOCKET.at(it - vectorSOCKET.begin());
 		vectorRoom[roomNum].push_back(temp);
 		vectorSOCKET.erase(it);
+		cout << roomNum << "방 접속" << endl;
 	}
+
+
 	else {
-		if (vectorRoom.at(roomNum).size() > MAX_ROOM_CLNTNUM)
-			; //클라이언트에게 방이 꽉 찼다고 보냄
+		// 방이 꽉 찼는가?
+		if (vectorRoom.at(roomNum).size() == MAX_ROOM_CLNTNUM) { //클라이언트에게 방이 꽉 찼다고 보냄
+			LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+			char msg[] = "해당 방이 가득 찼습니다";
+			ioInfo->wsaBuf.len = strlen(msg);
+			ioInfo->wsaBuf.buf = msg;
+			ioInfo->rwMode = WRITE;
+			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+		}
+
 	}
+	return 0;
 }
