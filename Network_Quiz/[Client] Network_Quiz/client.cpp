@@ -95,12 +95,12 @@ unsigned WINAPI SendMsg(void* arg)   // send thread main
         if (msg == "\0")
             continue;
         //cin >> msg;
-        if (msg == "/q"|| msg == "/Q")
+        /*if (msg == "/q"|| msg == "/Q")
         {
            strNameMsg = strName + "종료";
            cout << "서버와의 연결을 종료합니다." << endl;
            exit(0);
-        }
+        }*/
         strNameMsg = strName + msg;
         send(hSock, strNameMsg.c_str(), strNameMsg.length(), 0);
     }
@@ -120,6 +120,8 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
         nameMsg[strLen] = 0;
         if (!strcmp(nameMsg, "[Server] /cls"))
             system("cls");
+        else if (!strcmp(nameMsg, "대기방 종료"))
+            exit(1);
         else {
             cout << nameMsg << endl;
             //fputs(nameMsg, stdout);
