@@ -18,8 +18,24 @@ using namespace std;
 #define BUF_SIZE 1024
 #define READ 3
 #define WRITE 5
-#define MAX_ROOM 5
 #define MAX_ROOM_CLNTNUM 4
+class SocketScore {
+public:
+	SOCKET socket;
+	string name; // 닉네임
+	int score = 0; // 점수
+	bool ready = false;
+
+	SocketScore(SOCKET sock) {
+		this->socket = sock;
+	}
+	int operator== (SocketScore socketScore) {
+		if (this->socket == socketScore.socket) {
+			return 1;
+		}
+		return 0;
+	}
+};
 
 typedef struct {
 	SOCKET hClntSock;
@@ -34,41 +50,25 @@ typedef struct {
 	int rwMode;
 }PER_IO_DATA, * LPPER_IO_DATA;
 
-class{ //방정보가 필요해서 클라이언트 소켓 정보를 담는 구조체가 필요함
-	SOCKET sock;
-	string name; //닉네임
-	int i = 0; //방 정보 0:대기방, 1 ~ n : 대기방
-}CLNT_INFO;
+
 
 DWORD WINAPI EchoThreadMain(LPVOID CompletionPortIO);
 
 static int nThreadNum = 1;
 char tmp5[14] = "[Server] /cls";
 
-vector<SOCKET> vectorSOCKET;
-vector<vector<SOCKET>> vectorRoom;
+vector<SocketScore> socketVector;
 
-// 방 번호 출력
-string PrintRoomInfo();
 // 송신자를 제외한 모든 클라이언트에게 보내기
 void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer);
 // 송신자를 포함한 모든 클라이언트에게 보내기
 void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer);
-// 게임방에 있는 모든 클라이언트에게 메시지 보내기
-void SendMessageRoomAllClients(SOCKET sock);
 // 명령어 비교(/ + 명령어)
 void commandCompare(SOCKET sock, vector<string> commandSplit);
-// 방 입장
-void joinRoom(SOCKET sock, vector<string> commandSplit);
-// 명령어 설명 출력(대기방)
-void printCommand(SOCKET sock);
-// 명령어 설명 출력(게임방)
-void printRoomCommand(SOCKET sock);
+// /help 메시지 송신
+void PrintCommand(SOCKET sock);
 
 int main() {
-	for (int i = 0; i < MAX_ROOM; i++) {
-		vectorRoom.push_back(vector<SOCKET>());
-	}
 
 	WSADATA wsaData;
 	HANDLE hComPort;
@@ -122,18 +122,11 @@ int main() {
 		ioInfo->rwMode = READ;
 
 		// vector 클라이언트 소켓 추가
-		vectorSOCKET.push_back(hClntSock);
+		socketVector.push_back(SocketScore(hClntSock));
 
-		// 화면 초기화
-		SendMessageAllClients(14, tmp5);
-		Sleep(100);
-
-		// 방 정보 보내기
-		string strRoomInfo = PrintRoomInfo();
-		char* charRoomInfo = new char[strRoomInfo.length()];
-		strcpy(charRoomInfo, strRoomInfo.c_str());
-
-		SendMessageAllClients(strRoomInfo.length(), charRoomInfo);
+		//// 화면 초기화
+		//SendMessageAllClients(14, tmp5);
+		//Sleep(100);
 
 		// &info->overlapped  info 전체 주소 전달
 		WSARecv(handleInfo->hClntSock, &(ioInfo->wsaBuf), 1, &recvBytes, &flags, &(ioInfo->overlapped), NULL);
@@ -163,37 +156,17 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 			
 			// exit(0) 반환 시
 			if (bytesTrans == 0) {
-				int i = 0;
-				auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
-				if (it != vectorSOCKET.end()) { //대기방에 있는 경우
-					closesocket(sock);
-					free(handleInfo);
-					free(ioInfo);
-					vectorSOCKET.erase(it);
-				}
-				else { //게임방에 있는 경우
-					while (true) {
-						auto it = find(vectorRoom[i].begin(), vectorRoom[i].end(), sock);
-						if (it != vectorRoom[i].end()) {
-							vectorRoom[i].erase(it);
-							break;
-						}
-						i++;
-					}
-				}
-				// 화면 초기화
-				SendMessageAllClients(14, tmp5);
-
-				// 방 정보 보내기
-				string strRoomInfo = PrintRoomInfo();
-				char* charRoomInfo = new char[strRoomInfo.length()];
-				strcpy(charRoomInfo, strRoomInfo.c_str());
-
-				SendMessageAllClients(strRoomInfo.length(), charRoomInfo);
+				//대기방에 있는 경우
+				auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
+				socketVector.erase(it);
+				closesocket(sock);
+				free(handleInfo);
+				free(ioInfo);
 				continue;
 			}
 
 
+			
 
 			// 송신자를 제외한 모두에게 보내기
 			//char* charMessageFromClient = new char[ioInfo->wsaBuf.len];
@@ -217,7 +190,6 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 			if (strMessageFromClient[0] == '/') {
 				//cout << "클라이언트로 부터 명령어 입력입니다." << endl;
 				// 명령어 분리하기
-				// 
 				// 2번째 공백 위치
 				// ex /test1 test2 -> test
 				istringstream CommandSpliter(strMessageFromClient);
@@ -260,15 +232,15 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer) {
 	//모두에게 보내기
 
-	for (int i = 0; i < vectorSOCKET.size(); i++) {
-		if (memcmp(&sock, &vectorSOCKET.at(i), sizeof(SOCKET)) != 0) {
+	for (int i = 0; i < socketVector.size(); i++) {
+		if (memcmp(&sock, &socketVector.at(i), sizeof(SOCKET)) != 0) {
 			LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
 
 			ioInfo->wsaBuf.len = bytesTrans;
 			ioInfo->wsaBuf.buf = messageBuffer;
 			ioInfo->rwMode = WRITE;
-			WSASend(vectorSOCKET.at(i), &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+			WSASend(socketVector.at(i).socket, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 
 		}
 	}
@@ -278,31 +250,15 @@ void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer)
 void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer) {
 	//모두에게 보내기
 
-	for (int i = 0; i < vectorSOCKET.size(); i++) {
+	for (int i = 0; i < socketVector.size(); i++) {
 			LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
 
 			ioInfo->wsaBuf.len = bytesTrans;
 			ioInfo->wsaBuf.buf = messageBuffer;
 			ioInfo->rwMode = WRITE;
-			WSASend(vectorSOCKET.at(i), &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+			WSASend(socketVector.at(i).socket, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 	}
-}
-
-void SendMessageRoomAllClients(SOCKET sock, int i) {
-	;
-}
-
-// 방 번호를 출력
-string PrintRoomInfo() {
-	string roomStr="";
-	for (int i = 0; i < MAX_ROOM; i++) {
-		roomStr += to_string(i + 1) + "번 방 || 인원 수 " + to_string(vectorRoom.at(i).size())+"/4\n";
-
-		//cout << i + 1 << "번 방 || 인원 수 " << vectorRoom.at(i).size() << "/4" << endl;
-	}
-	cout << roomStr << endl;
-	return roomStr;
 }
 
 //명령어 비교(/ + 명령어)
@@ -310,160 +266,66 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
 	ioInfo->rwMode = WRITE;
-	
-	int i = 0;
-	auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
-
-	if (it != vectorSOCKET.end()) { //대기방
-		if (commandSplit.at(0) == "/help") //설명
-			printCommand(sock);
-		else if (commandSplit.at(0) == "/join") //방 입장
-			joinRoom(sock, commandSplit);
-		else if (commandSplit.at(0) == "/q" || commandSplit.at(0) == "/Q") { //종료
-			int i = 0;
-			auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
-			char msg[] = "대기방 종료";
-			ioInfo->wsaBuf.len = strlen(msg);
-			ioInfo->wsaBuf.buf = msg;
-			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-
-			// 화면 초기화
-			SendMessageAllClients(14, tmp5);
-
-			// 방 정보 보내기
-			string strRoomInfo = PrintRoomInfo();
-			char* charRoomInfo = new char[strRoomInfo.length()];
-			strcpy(charRoomInfo, strRoomInfo.c_str());
-
-			SendMessageAllClients(strRoomInfo.length(), charRoomInfo);
-		}
-		else {
-			char msg[] = "명령어를 확인해주세요";
-			ioInfo->wsaBuf.len = strlen(msg);
-			ioInfo->wsaBuf.buf = msg;
-			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-		}
-	}
-	else { //게임방
-		if (commandSplit.at(0) == "/help") //설명
-			printRoomCommand(sock);
-		else if (commandSplit.at(0) == "/ready") //준비
-			cout << "ready 입력" << endl;
-		else if (commandSplit.at(0) == "/start") //시작(방장만)
-			cout << "start 입력" << endl;
-		else if (commandSplit.at(0) == "/q" || commandSplit.at(0) == "/Q"){ //방나가기
-			while (true) {
-				auto it = find(vectorRoom[i].begin(), vectorRoom[i].end(), sock);
-				if (it != vectorRoom[i].end()) {
-					vectorSOCKET.push_back(sock);
-					vectorRoom[i].erase(it);
-					break;
-				}
-				i++;
-			}
-			// 화면 초기화
-			SendMessageAllClients(14, tmp5);
-
-			// 방 정보 보내기
-			string strRoomInfo = PrintRoomInfo();
-			char* charRoomInfo = new char[strRoomInfo.length()];
-			strcpy(charRoomInfo, strRoomInfo.c_str());
-
-			SendMessageAllClients(strRoomInfo.length(), charRoomInfo);
-		}
-		else {
-			char msg[] = "명령어를 확인해주세요";
-			ioInfo->wsaBuf.len = strlen(msg);
-			ioInfo->wsaBuf.buf = msg;
-			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-		}
-	}
-}
-
-//명령어 설명 출력(/help)
-void printCommand(SOCKET sock) {
-	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
-	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-	char msg[] = "/help : 명령어 설명\n/join 숫자 : 해당 숫자 방 입장\n/q or /Q : 종료\n";
-	ioInfo->wsaBuf.len = strlen(msg);
-	ioInfo->wsaBuf.buf = msg;
-	ioInfo->rwMode = WRITE;
-	WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-}
-
-void printRoomCommand(SOCKET sock) {
-	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
-	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-	char msg[] = "/help : 명령어 설명\n/q or /Q : 방 나가기\n/ready : 입장한 방에서 준비\n/start : 방장이 게임 시작";
-	ioInfo->wsaBuf.len = strlen(msg);
-	ioInfo->wsaBuf.buf = msg;
-	ioInfo->rwMode = WRITE;
-	WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-}
-
-//방 입장
-void joinRoom(SOCKET sock, vector<string> commandSplit) {
-	int roomNum = stoi(commandSplit.at(1)) - 1;
-	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
-	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-	ioInfo->rwMode = WRITE;
-
-	///////////////////////////////
-	// 방 꽉채우기 위한 테스트용 //
-	///////////////////////////////
-	//vectorRoom.at(0).push_back(sock);
-	//vectorRoom.at(0).push_back(sock);
-	//vectorRoom.at(0).push_back(sock);
-	//vectorRoom.at(0).push_back(sock);
 
 
-	if (((roomNum > -1) && (roomNum < MAX_ROOM)) && (vectorRoom.at(roomNum).size() < MAX_ROOM_CLNTNUM)) {
-		auto it = find(vectorSOCKET.begin(), vectorSOCKET.end(), sock);
-		SOCKET temp = vectorSOCKET.at(it - vectorSOCKET.begin());
-		vectorRoom[roomNum].push_back(temp);
-		vectorSOCKET.erase(it);
-		cout << roomNum << "번 방 접속" << endl;
-		/*
-		LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
-		memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-		ioInfo->wsaBuf.len = strlen(tmp5);
-		ioInfo->wsaBuf.buf = tmp5;
-		ioInfo->rwMode = WRITE;
-		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-		*/
-		char msg[BUF_SIZE];
-		string s = commandSplit.at(1) + "번 방에 접속했습니다.";
-		strcpy(msg, s.c_str());
+
+	if (commandSplit.at(0) == "/help") //설명
+		PrintCommand(sock);
+	else if (commandSplit.at(0) == "/q" || commandSplit.at(0) == "/Q") { //종료
+		char msg[] = "프로그램 종료";
 		ioInfo->wsaBuf.len = strlen(msg);
 		ioInfo->wsaBuf.buf = msg;
 		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-
-		// 화면 초기화
-		SendMessageAllClients(14, tmp5);
-		Sleep(100);
-
-		char msg2[] = "해당 방이 가득 찼습니다";
-		ioInfo->wsaBuf.len = strlen(msg2);
-		ioInfo->wsaBuf.buf = msg2;
-		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-
-		// 방 정보 보내기
-		string strRoomInfo = PrintRoomInfo();
-		char* charRoomInfo = new char[strRoomInfo.length()];
-		strcpy(charRoomInfo, strRoomInfo.c_str());
-
-		SendMessageAllClients(strRoomInfo.length(), charRoomInfo);
+		exit(1);
 	}
-	
+	else if (commandSplit.at(0) == "/ready") { // 준비
+		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
+		bool* socketReady = &it->ready;
 
-	else {
-		// 방이 꽉 찼는가?
-		if (vectorRoom.at(roomNum).size() == MAX_ROOM_CLNTNUM) { //클라이언트에게 방이 꽉 찼다고 보냄
-			char msg[] = "해당 방이 가득 찼습니다";
+		if (*socketReady) {
+			char msg[] = "이미 준비 상태입니다.";
+			ioInfo->wsaBuf.len = strlen(msg);
+			ioInfo->wsaBuf.buf = msg;
+			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+		}
+		else {
+			*socketReady = true;
+			char msg[] = "준비 했습니다.";
 			ioInfo->wsaBuf.len = strlen(msg);
 			ioInfo->wsaBuf.buf = msg;
 			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 		}
 
+		// 시작 가능한지 확인
+		for (int i = 0; i < socketVector.size(); i++) {
+			if (socketVector.at(i).ready == false)
+				return;
+		}
+
+		// 시작 하기
+		char msg[] = "게임을 시작합니다.";
+		ioInfo->wsaBuf.len = strlen(msg);
+		ioInfo->wsaBuf.buf = msg;
+		SendMessageAllClients(sizeof(msg) / sizeof(char), msg);
+		
 	}
+
+	else {
+		char msg[] = "명령어를 확인해주세요";
+		ioInfo->wsaBuf.len = strlen(msg);
+		ioInfo->wsaBuf.buf = msg;
+		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+	}
+
+}
+
+//명령어 설명 출력(/help)
+void PrintCommand(SOCKET sock) {
+	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+	char msg[] = "/help : 명령어 설명\n/ready : 입장한 방에서 준비\n/start : 방장이 게임 시작";
+	ioInfo->wsaBuf.len = strlen(msg);
+	ioInfo->wsaBuf.buf = msg;
+	ioInfo->rwMode = WRITE;
+	WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 }

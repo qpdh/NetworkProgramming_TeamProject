@@ -29,13 +29,6 @@ int main(int argc, char* argv[])
     SOCKET hSock;
     SOCKADDR_IN servAdr;
     HANDLE hSndThread, hRcvThread;
-    char IP[100];
-    int PORT;
-
-    cout << "아이피주소 설정 >> ";
-    cin >> IP;
-    cout << "포트 설정 >> ";
-    cin >> PORT;
 
     //char inputName[NAME_SIZE];
     //printf("닉네임 입력 : ");
@@ -61,8 +54,8 @@ int main(int argc, char* argv[])
 
     memset(&servAdr, 0, sizeof(servAdr));
     servAdr.sin_family = AF_INET;
-    servAdr.sin_addr.s_addr = inet_addr(IP);
-    servAdr.sin_port = htons(PORT);
+    servAdr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servAdr.sin_port = htons(20000);
 
     if (connect(hSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)
         ErrorHandling("connect() error");
