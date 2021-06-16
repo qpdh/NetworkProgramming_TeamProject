@@ -356,33 +356,9 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	else if (commandSplit.at(0) == "/name") {
 		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 		if (socketVector.at(it - socketVector.begin()).login == 1) {
-			//char msg[BUF_SIZE];
-			//char name[BUF_SIZE];
-			//const char* temp_name = socketVector.at(it - socketVector.begin()).name.c_str();
-			//strcpy(name, temp_name);
-			//const char* temp_name2 = commandSplit.at(1).c_str();
-			//char name2[BUF_SIZE];
-			//strcat(name, "이 닉네임을 ");
-			//strcat(name2, "로 변경하였습니다."); 
-			//strcat(msg, name);
-			//strcat(msg, name2);
- 			//ioInfo->wsaBuf.len = strlen(msg);
-			//ioInfo->wsaBuf.buf = msg;
-			//SendMessageAllClients(strlen(msg), msg);
-			//WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-			
-			
 		}
 		else {
-			//char msg[BUF_SIZE];
-			//const char* temp_name = commandSplit.at(1).c_str();
-			//strcat(msg, temp_name);
-			//strcat(msg, "님이 참가하였습니다.");
-			//ioInfo->wsaBuf.len = strlen(msg);
-			//ioInfo->wsaBuf.buf = msg;
 			socketVector.at(it - socketVector.begin()).login = 1;
-			//WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-			//SendMessageAllClients(strlen(msg), msg);
 		}
 		socketVector.at(it - socketVector.begin()).name = commandSplit.at(1); //이름 저장
 
