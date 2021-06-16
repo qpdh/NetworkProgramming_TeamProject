@@ -30,6 +30,7 @@ int main(int argc, char* argv[])
     SOCKET hSock;
     SOCKADDR_IN servAdr;
     HANDLE hSndThread, hRcvThread;
+    string nameSet;
 
     //char inputName[NAME_SIZE];
     //printf("닉네임 입력 : ");
@@ -68,6 +69,8 @@ int main(int argc, char* argv[])
 
     cout << "접속 성공" << endl;
     string loginMsg = strName + "접속";
+    nameSet = strName + "/name" + " " + inputName;
+    send(hSock, nameSet.c_str(), nameSet.length(), 0);
     send(hSock, loginMsg.c_str(), loginMsg.length(), 0);
 
     WaitForSingleObject(hSndThread, INFINITE);
@@ -95,10 +98,7 @@ unsigned WINAPI SendMsg(void* arg)   // send thread main
            cout << "서버와의 연결을 종료합니다." << endl;
            exit(0);
         }*/
-        if (msg == "/ready")
-            strNameMsg = strName + msg + " " + inputName;
-        else
-            strNameMsg = strName + msg;
+        strNameMsg = strName + msg;
         send(hSock, strNameMsg.c_str(), strNameMsg.length(), 0);
     }
     return 0;
