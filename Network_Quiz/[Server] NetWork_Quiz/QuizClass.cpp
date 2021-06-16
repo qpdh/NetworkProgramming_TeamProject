@@ -6,6 +6,8 @@
 #include <vector>
 #include <ctime>
 #include <random>
+#include <sstream>
+
 using namespace std;
 
 vector<Quiz> quizVector;
@@ -16,8 +18,14 @@ void ReadCSV() {
 
 	while (!fs.eof()) {
 		string quizBuffer[4];
+		string lineString;
 		for (int i = 0; i < sizeof(quizBuffer)/sizeof(string); i++) {
-			getline(fs, quizBuffer[i], ';');
+			getline(fs, lineString, '\n');
+			istringstream CommandSpliter(lineString);
+			for (int i = 0; i < 4; i++) {
+
+				getline(CommandSpliter, quizBuffer[i], ',');
+			}
 			//cout << quizBuffer[i] << endl;
 		}
 		//cout << "문제 번호 : " << quizBuffer[0] << endl;

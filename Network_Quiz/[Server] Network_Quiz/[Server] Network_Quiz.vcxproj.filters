@@ -31,8 +31,5 @@
     <None Include="quiztest.csv">
       <Filter>리소스 파일</Filter>
     </None>
-    <None Include="quiztest_utf8.csv">
-      <Filter>리소스 파일</Filter>
-    </None>
   </ItemGroup>
 </Project>

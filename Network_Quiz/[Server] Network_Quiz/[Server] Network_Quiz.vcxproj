@@ -147,7 +147,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="quiztest.csv" />
-    <None Include="quiztest_utf8.csv" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

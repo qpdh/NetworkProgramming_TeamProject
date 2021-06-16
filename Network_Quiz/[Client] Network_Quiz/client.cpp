@@ -56,18 +56,34 @@ int main(int argc, char* argv[])
 
     memset(&servAdr, 0, sizeof(servAdr));
     servAdr.sin_family = AF_INET;
-    servAdr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servAdr.sin_addr.s_addr = inet_addr("125.190.106.134");
     servAdr.sin_port = htons(20000);
 
     if (connect(hSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)
         ErrorHandling("connect() error");
+
+    cout << "立加 吝..." << endl;
+
+
+    char connectMsg[BUF_SIZE];
+    int strLen = recv(hSock, connectMsg, BUF_SIZE - 1, 0);
+    connectMsg[strLen] = 0;
+    if (strLen == 0) {
+        cout << "立加 角菩" << endl;
+        system("PAUSE");
+        return -1;
+    }
+
 
     hSndThread =
         (HANDLE)_beginthreadex(NULL, 0, SendMsg, (void*)&hSock, 0, NULL);
     hRcvThread =
         (HANDLE)_beginthreadex(NULL, 0, RecvMsg, (void*)&hSock, 0, NULL);
 
-    cout << "立加 己傍" << endl;
+
+
+
+
     string loginMsg = strName + "立加";
     nameSet = strName + "/name" + " " + inputName;
     send(hSock, nameSet.c_str(), nameSet.length(), 0);
