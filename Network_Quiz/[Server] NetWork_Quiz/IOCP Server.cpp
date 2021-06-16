@@ -20,6 +20,7 @@ using namespace std;
 #define READ 3
 #define WRITE 5
 #define MAX_ROOM_CLNTNUM 4
+
 class SocketScore {
 public:
 	SOCKET socket;
@@ -49,6 +50,7 @@ typedef struct {
 	OVERLAPPED overlapped;
 	WSABUF wsaBuf;
 	char buffer[BUF_SIZE];
+	const char* constBuffer;
 	int rwMode;
 }PER_IO_DATA, * LPPER_IO_DATA;
 
@@ -157,13 +159,12 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 	nThreadNum++;
 
 	while (1) {
-		
+
 		GetQueuedCompletionStatus(hComPort, &bytesTrans, (LPDWORD)&handleInfo, (LPOVERLAPPED*)&ioInfo, INFINITE);
 		sock = handleInfo->hClntSock;
 
 		if (ioInfo->rwMode == READ) {
-			//printf("%d : received!\n", nNum);
-			
+
 			// exit(0) 반환 시
 			if (bytesTrans == 0) {
 				//대기방에 있는 경우
@@ -175,27 +176,21 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 				continue;
 			}
 
-
-			
-
 			// 송신자를 제외한 모두에게 보내기
 			//char* charMessageFromClient = new char[ioInfo->wsaBuf.len];
 			char* charMessageFromClient = new char[strlen(ioInfo->buffer)];
 			strcpy(charMessageFromClient, ioInfo->buffer);
 			free(ioInfo);
 
-			///////////////////////////
 			//입력 값 검증
 			//명령어 인가?
 			// 클라이언트가 보낸 메시지 
 			// string strMessageFromClient
-			//
 			charMessageFromClient[bytesTrans] = 0;
 			string strMessageFromClient = charMessageFromClient;
 
 			// 이름 부분 자르기
 			strMessageFromClient = strMessageFromClient.substr(strMessageFromClient.find(" ") + 1);
-			//cout << "클라이언트로 부터 메시지 : " << strMessageFromClient << endl;
 
 			if (strMessageFromClient[0] == '/') {
 				//cout << "클라이언트로 부터 명령어 입력입니다." << endl;
@@ -208,8 +203,6 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 				while (getline(CommandSpliter, stringBuffer, ' ')) {
 					commandSplit.push_back(stringBuffer);
 				}
-				//cout << "입력된 명령어 : " << commandSplit.at(0) << endl;
-
 
 				//중간 함수부분
 				commandCompare(sock, commandSplit);
@@ -220,29 +213,33 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 				if (isGameStart) {
 					string answer = nowQuiz.getAnswer();
 					if (answer == strMessageFromClient) {
-						char msg[] = "정답!";
 
-						LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
-						memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-
-						ioInfo->wsaBuf.len = strlen(msg);
-						ioInfo->wsaBuf.buf = msg;
-						ioInfo->rwMode = WRITE;
-						WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-
-						
+						// 정답 SocketScore 반환
+						auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 
 						// 점수 추가
-						auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 						it->score += 1;
+
+						string stringMsg = "정답자 [" + it->name + "]";
+						char* msg = new char[strlen(stringMsg.c_str())];
+						strcpy(msg, stringMsg.c_str());
+
+						SendMessageAllClients(strlen(msg), msg);
 
 						// 5점을 달성한 사람이 있으면 게임 종료
 						if (it->score == 5) {
 							char msg[] = "게임 종료";
-							SendMessageAllClients(strlen(msg),msg);
+							SendMessageAllClients(strlen(msg), msg);
 							// TODO 게임 종료 처리
 							// 점수표 출력
 							PrintScore();
+
+							for (int i = 0; i < socketVector.size(); i++) {
+								socketVector.at(i).ready = false;
+								socketVector.at(i).score = 0;
+
+							}
+							isGameStart = false;
 						}
 
 						// 5점을 넘은 사람이 없으면 다음문제
@@ -253,8 +250,6 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 				}
 				SendMessageOtherClients(sock, bytesTrans, charMessageFromClient);
 			}
-
-
 
 			ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
@@ -296,13 +291,13 @@ void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer) {
 	//모두에게 보내기
 
 	for (int i = 0; i < socketVector.size(); i++) {
-			LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
-			memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+		LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+		memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
 
-			ioInfo->wsaBuf.len = bytesTrans;
-			ioInfo->wsaBuf.buf = messageBuffer;
-			ioInfo->rwMode = WRITE;
-			WSASend(socketVector.at(i).socket, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+		ioInfo->wsaBuf.len = bytesTrans;
+		ioInfo->wsaBuf.buf = messageBuffer;
+		ioInfo->rwMode = WRITE;
+		WSASend(socketVector.at(i).socket, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 	}
 }
 
@@ -324,7 +319,7 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	else if (commandSplit.at(0) == "/ready") { // 준비
 		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 		bool* socketReady = &it->ready;
-		
+
 
 		if (*socketReady) {
 			char msg[] = "이미 준비 상태입니다.";
@@ -337,7 +332,7 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 			char msg[] = "준비 했습니다.";
 			ioInfo->wsaBuf.len = strlen(msg);
 			ioInfo->wsaBuf.buf = msg;
-			
+
 			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 		}
 
@@ -355,13 +350,15 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 		// startgame();
 		StartGame();
 		isGameStart = true;
-		
+
 	}
 
 	else if (commandSplit.at(0) == "/name") {
+
 		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 		socketVector.at(it - socketVector.begin()).name = commandSplit.at(1); //이름 저장
-		string b = socketVector.at(it - socketVector.begin()).name; 
+
+		string b = socketVector.at(it - socketVector.begin()).name;
 		cout << b << endl; //서버에서 이름 접근 가능
 	}
 
@@ -379,7 +376,8 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 void PrintCommand(SOCKET sock) {
 	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-	char msg[] = "/help : 명령어 설명\n/ready : 입장한 방에서 준비\n/start : 방장이 게임 시작";
+	char msg[] = "/help : 명령어 설명\n/ready : 입장한 방에서 준비\n";
+
 	ioInfo->wsaBuf.len = strlen(msg);
 	ioInfo->wsaBuf.buf = msg;
 	ioInfo->rwMode = WRITE;
@@ -391,10 +389,10 @@ void PrintCommand(SOCKET sock) {
 void StartGame() {
 	ReadCSV();
 	nowQuiz = StartQuiz();
-	
-	char *msg = new char[strlen(nowQuiz.getProblem())];
+
+	char* msg = new char[strlen(nowQuiz.getProblem())];
 	strcpy(msg, nowQuiz.getProblem());
-	
+
 	SendMessageAllClients(strlen(nowQuiz.getProblem()), msg);
 }
 
@@ -403,7 +401,7 @@ void PrintScore() {
 	string msg = "이름\t점수\n";
 	cout << "이름" << "\t" << "점수" << endl;
 	for (int i = 0; i < socketVector.size(); i++) {
-		msg += socketVector.at(i).name + "\t" +  to_string(socketVector.at(i).score)+"\n";
+		msg += socketVector.at(i).name + "\t" + to_string(socketVector.at(i).score) + "\n";
 		cout << socketVector.at(i).name << "\t" << socketVector.at(i).score << endl;
 	}
 	char* msg2 = new char[strlen(msg.c_str())];

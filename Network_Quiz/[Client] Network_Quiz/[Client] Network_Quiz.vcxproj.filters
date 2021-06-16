@@ -18,11 +18,5 @@
     <ClCompile Include="client.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="clnt_main.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="IOCP Client.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
