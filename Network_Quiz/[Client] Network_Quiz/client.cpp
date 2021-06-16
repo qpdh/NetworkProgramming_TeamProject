@@ -20,6 +20,7 @@ void ErrorHandling(const char* msg);
 
 //char name[NAME_SIZE] = "[DEFAULT]";
 string strName;
+string inputName = "default nick";
 
 char msg[BUF_SIZE];
 
@@ -34,7 +35,7 @@ int main(int argc, char* argv[])
     //printf("닉네임 입력 : ");
     //scanf("%s", inputName);
 
-    string inputName = "default nick";
+    
     while (true) {
         cout << "닉네임 입력 : ";
         cin >> inputName;
@@ -94,7 +95,10 @@ unsigned WINAPI SendMsg(void* arg)   // send thread main
            cout << "서버와의 연결을 종료합니다." << endl;
            exit(0);
         }*/
-        strNameMsg = strName + msg;
+        if (msg == "/ready")
+            strNameMsg = strName + msg + " " + inputName;
+        else
+            strNameMsg = strName + msg;
         send(hSock, strNameMsg.c_str(), strNameMsg.length(), 0);
     }
     return 0;
