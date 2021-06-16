@@ -3,22 +3,8 @@
 #include <string>
 using namespace std;
 
+void ReadCSV(void);
 
-
-class QuizManagement {
-	int categoryNumber;
-	string quizType;
-	int numOfQuiz;
-
-public:
-	QuizManagement(int categoryNumber, string quizType, int numOfQuiz) {
-		this->categoryNumber = categoryNumber;
-		this->quizType = quizType;
-		this->numOfQuiz = numOfQuiz;
-
-	}
-	
-};
 
 class Quiz {
 	string quizNumber;
@@ -26,6 +12,7 @@ class Quiz {
 	string answer;
 	string comment;
 public:
+	Quiz() {}
 	Quiz(string quizNumber, string problem, string answer, string comment) {
 		this->quizNumber = quizNumber;
 		this->problem = problem;
@@ -33,9 +20,10 @@ public:
 		this->comment = comment;
 	}
 
-	void printTest() {
-		cout << quizNumber << " " << problem << " " << answer << " " << comment << endl;
-	}
+	//void printTest() {
+	//	cout << "test" << endl;
+	//	//cout << quizNumber << " " << problem << " " << answer << " " << comment << std::endl;
+	//}
 
 	const char* getProblem() {
 		return problem.c_str();
@@ -46,5 +34,5 @@ public:
 	}
 };
 
-void ReadCsv();
-Quiz StartQuiz();
+Quiz StartQuiz(void);
+

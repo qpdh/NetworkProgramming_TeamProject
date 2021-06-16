@@ -140,7 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="IOCP Server.cpp" />
-    <ClCompile Include="readCsv.cpp" />
+    <ClCompile Include="QuizClass.cpp" />
     <ClCompile Include="server.cpp" />
     <ClCompile Include="serv_main.cpp" />
   </ItemGroup>

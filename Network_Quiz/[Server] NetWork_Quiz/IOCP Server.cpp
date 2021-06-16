@@ -10,6 +10,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include "QuizClass.h"
 
 using namespace std;
 
@@ -56,6 +57,8 @@ DWORD WINAPI EchoThreadMain(LPVOID CompletionPortIO);
 
 static int nThreadNum = 1;
 char tmp5[14] = "[Server] /cls";
+bool isGameStart = false;
+Quiz nowQuiz;
 
 vector<SocketScore> socketVector;
 
@@ -67,6 +70,9 @@ void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer);
 void commandCompare(SOCKET sock, vector<string> commandSplit);
 // /help 메시지 송신
 void PrintCommand(SOCKET sock);
+// 게임 시작
+void StartGame();
+
 
 int main() {
 
@@ -206,6 +212,23 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 			}
 
 			else {
+				// 게임 시작인가?
+				if (isGameStart) {
+					string answer = nowQuiz.getAnswer();
+					if (answer == strMessageFromClient) {
+						char msg[] = "정답!";
+
+						LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
+						memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
+
+						ioInfo->wsaBuf.len = strlen(msg);
+						ioInfo->wsaBuf.buf = msg;
+						ioInfo->rwMode = WRITE;
+						WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+						StartGame();
+						// 점수 추가
+					}
+				}
 				SendMessageOtherClients(sock, bytesTrans, charMessageFromClient);
 			}
 
@@ -276,7 +299,7 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 		ioInfo->wsaBuf.len = strlen(msg);
 		ioInfo->wsaBuf.buf = msg;
 		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-		exit(1);
+		//exit(1);
 	}
 	else if (commandSplit.at(0) == "/ready") { // 준비
 		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
@@ -307,6 +330,9 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 		ioInfo->wsaBuf.len = strlen(msg);
 		ioInfo->wsaBuf.buf = msg;
 		SendMessageAllClients(sizeof(msg) / sizeof(char), msg);
+		// startgame();
+		StartGame();
+		isGameStart = true;
 		
 	}
 
@@ -328,4 +354,14 @@ void PrintCommand(SOCKET sock) {
 	ioInfo->wsaBuf.buf = msg;
 	ioInfo->rwMode = WRITE;
 	WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+}
+
+void StartGame() {
+	ReadCSV();
+	nowQuiz = StartQuiz();
+	
+	char *msg = new char[strlen(nowQuiz.getProblem())];
+	strcpy(msg, nowQuiz.getProblem());
+	
+	SendMessageAllClients(strlen(nowQuiz.getProblem()), msg);
 }

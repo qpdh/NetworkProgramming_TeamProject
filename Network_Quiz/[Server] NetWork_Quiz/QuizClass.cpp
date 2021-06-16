@@ -1,9 +1,8 @@
 #pragma once
-
+#include "QuizClass.h"
 #include <iostream>
 #include <string>
 #include <fstream>
-#include "quizClass.h"
 #include <vector>
 #include <ctime>
 #include <random>
@@ -11,11 +10,9 @@ using namespace std;
 
 vector<Quiz> quizVector;
 
-void ReadCsv() {
+void ReadCSV() {
 	fstream fs;
 	fs.open("quiztest.csv",ios::in);
-
-
 
 	while (!fs.eof()) {
 		string quizBuffer[4];

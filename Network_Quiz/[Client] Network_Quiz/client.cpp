@@ -113,7 +113,7 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
         nameMsg[strLen] = 0;
         if (!strcmp(nameMsg, "[Server] /cls"))
             system("cls");
-        else if (!strcmp(nameMsg, "대기방 종료"))
+        else if (!strcmp(nameMsg, "프로그램 종료"))
             exit(1);
         else {
             cout << nameMsg << endl;
