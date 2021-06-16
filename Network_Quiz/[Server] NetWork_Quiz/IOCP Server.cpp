@@ -66,13 +66,9 @@ Quiz nowQuiz;
 
 // 
 CRITICAL_SECTION cs;
-CRITICAL_SECTION gameStartLock;
-
 
 // 접속한 클라이언트 벡터
 vector<SocketScore> socketVector;
-
-
 
 // 송신자를 제외한 모든 클라이언트에게 보내기
 void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer);
@@ -106,7 +102,6 @@ int main() {
 
 	// 임계영역 초기화
 	InitializeCriticalSection(&cs);
-	InitializeCriticalSection(&gameStartLock);
 
 	hComPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 	GetSystemInfo(&sysInfo);
@@ -283,7 +278,6 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 
 							}
 							isGameStart = false;
-							LeaveCriticalSection(&gameStartLock);
 						}
 
 						// 5점을 넘은 사람이 없으면 다음문제
@@ -370,6 +364,13 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 
 		LeaveCriticalSection(&cs);
 		/////////////////////임계영역//////////////////////////
+		if (isGameStart) {
+			char msg[] = "이미 게임이 진행중입니다.";
+			ioInfo->wsaBuf.len = strlen(msg);
+			ioInfo->wsaBuf.buf = msg;
+			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+			return;
+		}
 
 		if (*socketReady) {
 			char msg[] = "이미 준비 상태입니다.";
@@ -388,18 +389,24 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	}
 	else if (commandSplit.at(0) == "/start"){
 		//게임 시작중 해당 명령어 무시
-		////////임계영역/////////////
-		EnterCriticalSection(&gameStartLock);
 		if (isGameStart) {
+			char msg[] = "이미 게임이 진행중입니다.";
+			ioInfo->wsaBuf.len = strlen(msg);
+			ioInfo->wsaBuf.buf = msg;
+			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 			return;
 		}
-		LeaveCriticalSection(&gameStartLock);
-		/////////////////////////////
+
 		if (socketVector.size() > 1) {
 			// 시작 가능한지 확인
 			for (int i = 0; i < socketVector.size(); i++) {
-				if (socketVector.at(i).ready == false)
+				if (socketVector.at(i).ready == false) {
+					char msg[] = "모든 플레이어가 준비되지 않았습니다.";
+					ioInfo->wsaBuf.len = strlen(msg);
+					ioInfo->wsaBuf.buf = msg;
+					SendMessageAllClients(sizeof(msg) / sizeof(char), msg);
 					return;
+				}
 			}
 
 			// 시작 하기
@@ -412,7 +419,6 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 			isGameStart = true;
 		}
 		else {
-
 			char msg[] = "2명 이상이여야 진행이 가능합니다.";
 			ioInfo->wsaBuf.len = strlen(msg);
 			ioInfo->wsaBuf.buf = msg;
@@ -423,22 +429,6 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	else if (commandSplit.at(0) == "/name") {
 		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 		if (socketVector.at(it - socketVector.begin()).login == 1) {
-			//char msg[BUF_SIZE];
-			//char name[BUF_SIZE];
-			//const char* temp_name = socketVector.at(it - socketVector.begin()).name.c_str();
-			//strcpy(name, temp_name);
-			//const char* temp_name2 = commandSplit.at(1).c_str();
-			//char name2[BUF_SIZE];
-			//strcat(name, "이 닉네임을 ");
-			//strcat(name2, "로 변경하였습니다."); 
-			//strcat(msg, name);
-			//strcat(msg, name2);
-			//ioInfo->wsaBuf.len = strlen(msg);
-			//ioInfo->wsaBuf.buf = msg;
-			//SendMessageAllClients(strlen(msg), msg);
-			//WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-
-
 
 		}
 		else {
@@ -491,13 +481,6 @@ void PrintScore() {
 		msg += socketVector.at(i).name + "\t" + to_string(socketVector.at(i).score) + "\n";
 		cout << socketVector.at(i).name << "\t" << socketVector.at(i).score << endl;
 	}
-	//vector<char> msgVector(msg.begin(), msg.end());
-	//msgVector.push_back('\0');
-
-	//char* msg2 = new char[strlen(msg.c_str())];
-	//strcpy(msg2, msg.c_str());
-	//SendMessageAllClients(strlen(msg2), msg2);
-	//SendMessageAllClients(msgVector.size(), (char*)&*msgVector.begin());
 
 	vector<char> msgVector = stringToChar(msg);
 

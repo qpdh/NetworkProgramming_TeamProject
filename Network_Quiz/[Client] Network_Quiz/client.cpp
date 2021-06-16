@@ -47,8 +47,6 @@ int main(int argc, char* argv[])
     }
     strName = "[" + inputName + "] ";
 
-    //sprintf(name, "[%s]", inputName);
-
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         ErrorHandling("WSAStartup() error!");
 
@@ -64,7 +62,7 @@ int main(int argc, char* argv[])
 
     cout << "접속 중..." << endl;
 
-
+    // 접속 성공 실패 메시지 표시
     char connectMsg[BUF_SIZE];
     int strLen = recv(hSock, connectMsg, BUF_SIZE - 1, 0);
     connectMsg[strLen] = 0;
@@ -82,10 +80,6 @@ int main(int argc, char* argv[])
         (HANDLE)_beginthreadex(NULL, 0, SendMsg, (void*)&hSock, 0, NULL);
     hRcvThread =
         (HANDLE)_beginthreadex(NULL, 0, RecvMsg, (void*)&hSock, 0, NULL);
-
-
-
-
 
     string loginMsg = strName + "접속";
     nameSet = strName + "/name" + " " + inputName;
@@ -110,13 +104,6 @@ unsigned WINAPI SendMsg(void* arg)   // send thread main
         getline(cin,msg);
         if (msg == "\0")
             continue;
-        //cin >> msg;
-        /*if (msg == "/q"|| msg == "/Q")
-        {
-           strNameMsg = strName + "종료";
-           cout << "서버와의 연결을 종료합니다." << endl;
-           exit(0);
-        }*/
         
         if (msg.substr(0, 5) == "/name") {
             inputName = msg.substr(6, msg.size());
@@ -145,7 +132,6 @@ unsigned WINAPI RecvMsg(void* arg)   // read thread main
             exit(1);
         else {
             cout << nameMsg << endl;
-            //fputs(nameMsg, stdout);
         }
     }
     return 0;
