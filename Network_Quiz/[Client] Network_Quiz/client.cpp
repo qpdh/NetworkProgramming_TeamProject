@@ -98,6 +98,11 @@ unsigned WINAPI SendMsg(void* arg)   // send thread main
            cout << "서버와의 연결을 종료합니다." << endl;
            exit(0);
         }*/
+        
+        if (msg.substr(0, 5) == "/name") {
+            inputName = msg.substr(6, msg.size());
+            strName = "[" + inputName + "] ";
+        }
         strNameMsg = strName + msg;
         send(hSock, strNameMsg.c_str(), strNameMsg.length(), 0);
     }
