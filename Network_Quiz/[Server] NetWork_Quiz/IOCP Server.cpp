@@ -423,7 +423,6 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	else if (commandSplit.at(0) == "/name") {
 		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 		if (socketVector.at(it - socketVector.begin()).login == 1) {
-<<<<<<< HEAD
 			//char msg[BUF_SIZE];
 			//char name[BUF_SIZE];
 			//const char* temp_name = socketVector.at(it - socketVector.begin()).name.c_str();
@@ -440,8 +439,7 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 			//WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 
 
-=======
->>>>>>> 9e4f188a439a3df59235642faf2ae55690f53852
+
 		}
 		else {
 			socketVector.at(it - socketVector.begin()).login = 1;

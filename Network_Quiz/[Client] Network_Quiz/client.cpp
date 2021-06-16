@@ -73,6 +73,9 @@ int main(int argc, char* argv[])
         system("PAUSE");
         return -1;
     }
+    else {
+        cout << connectMsg << endl;
+    }
 
 
     hSndThread =
