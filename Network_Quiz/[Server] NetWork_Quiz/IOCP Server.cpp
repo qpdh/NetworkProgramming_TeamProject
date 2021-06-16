@@ -24,11 +24,12 @@ class SocketScore {
 public:
 	SOCKET socket;
 	string name; // 닉네임
-	int score = 0; // 점수
+	int score; // 점수
 	bool ready = false;
 
 	SocketScore(SOCKET sock) {
 		this->socket = sock;
+		score = 0;
 	}
 	int operator== (SocketScore socketScore) {
 		if (this->socket == socketScore.socket) {
@@ -72,6 +73,8 @@ void commandCompare(SOCKET sock, vector<string> commandSplit);
 void PrintCommand(SOCKET sock);
 // 게임 시작
 void StartGame();
+// 점수 출력
+void PrintScore();
 
 
 int main() {
@@ -110,6 +113,7 @@ int main() {
 		SOCKADDR_IN clntAdr;
 		int addrLen = sizeof(clntAdr);
 
+		// TODO isGameStart 상태면 슬립시키기
 		hClntSock = accept(hServSock, (SOCKADDR*)&clntAdr, &addrLen);
 
 		//cout << "현재 접속자 수 : " << vectorSOCKET.size()+1 << endl;
@@ -225,8 +229,26 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 						ioInfo->wsaBuf.buf = msg;
 						ioInfo->rwMode = WRITE;
 						WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-						StartGame();
+
+						
+
 						// 점수 추가
+						auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
+						it->score += 1;
+
+						// 5점을 달성한 사람이 있으면 게임 종료
+						if (it->score == 5) {
+							char msg[] = "게임 종료";
+							SendMessageAllClients(strlen(msg),msg);
+							// TODO 게임 종료 처리
+							// 점수표 출력
+							PrintScore();
+						}
+
+						// 5점을 넘은 사람이 없으면 다음문제
+						else {
+							StartGame();
+						}
 					}
 				}
 				SendMessageOtherClients(sock, bytesTrans, charMessageFromClient);
@@ -356,6 +378,8 @@ void PrintCommand(SOCKET sock) {
 	WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 }
 
+
+// 게임 시작 (다음문제 출제)
 void StartGame() {
 	ReadCSV();
 	nowQuiz = StartQuiz();
@@ -364,4 +388,17 @@ void StartGame() {
 	strcpy(msg, nowQuiz.getProblem());
 	
 	SendMessageAllClients(strlen(nowQuiz.getProblem()), msg);
+}
+
+// 점수표 출력
+void PrintScore() {
+	string msg = "이름\t점수\n";
+	cout << "이름" << "\t" << "점수" << endl;
+	for (int i = 0; i < socketVector.size(); i++) {
+		msg += socketVector.at(i).name + "\t" +  to_string(socketVector.at(i).score)+"\n";
+		cout << socketVector.at(i).name << "\t" << socketVector.at(i).score << endl;
+	}
+	char* msg2 = new char[strlen(msg.c_str())];
+	strcpy(msg2, msg.c_str());
+	SendMessageAllClients(strlen(msg2), msg2);
 }
