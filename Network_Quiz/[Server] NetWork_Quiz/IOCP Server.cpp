@@ -387,6 +387,32 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 		}
 	}
+	else if (commandSplit.at(0) == "/unready") { // 준비
+
+		/////////////////////임계영역//////////////////////////
+
+		EnterCriticalSection(&cs);
+		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
+		bool* socketReady = &it->ready;
+
+		LeaveCriticalSection(&cs);
+		/////////////////////임계영역//////////////////////////
+
+		if (*socketReady) {
+			char msg[] = "준비를 해제했습니다.";
+			ioInfo->wsaBuf.len = strlen(msg);
+			ioInfo->wsaBuf.buf = msg;
+			*socketReady = false;
+			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+		}
+		else {
+			char msg[] = "이미 준비상태가 아닙니다.";
+			ioInfo->wsaBuf.len = strlen(msg);
+			ioInfo->wsaBuf.buf = msg;
+
+			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
+		}
+	}
 	else if (commandSplit.at(0) == "/start"){
 		//게임 시작중 해당 명령어 무시
 		if (isGameStart) {
