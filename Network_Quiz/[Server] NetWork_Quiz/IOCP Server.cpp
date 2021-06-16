@@ -312,8 +312,6 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
 	ioInfo->rwMode = WRITE;
 
-
-
 	if (commandSplit.at(0) == "/help") //설명
 		PrintCommand(sock);
 	else if (commandSplit.at(0) == "/q" || commandSplit.at(0) == "/Q") { //종료
@@ -326,6 +324,7 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 	else if (commandSplit.at(0) == "/ready") { // 준비
 		auto it = find(socketVector.begin(), socketVector.end(), SocketScore(sock));
 		bool* socketReady = &it->ready;
+		socketVector.at(it - socketVector.begin()).name = commandSplit.at(1); //이름 저장
 
 		if (*socketReady) {
 			char msg[] = "이미 준비 상태입니다.";
@@ -334,10 +333,13 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 		}
 		else {
+			//string b = socketVector.at(it - socketVector.begin()).name; 
+			//cout << b << endl; 서버에서 이름 접근 가능
 			*socketReady = true;
 			char msg[] = "준비 했습니다.";
 			ioInfo->wsaBuf.len = strlen(msg);
 			ioInfo->wsaBuf.buf = msg;
+			
 			WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
 		}
 
