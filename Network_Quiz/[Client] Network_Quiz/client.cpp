@@ -32,10 +32,6 @@ int main(int argc, char* argv[])
     HANDLE hSndThread, hRcvThread;
     string nameSet;
 
-    //char inputName[NAME_SIZE];
-    //printf("닉네임 입력 : ");
-    //scanf("%s", inputName);
-
     
     while (true) {
         cout << "닉네임 입력 : ";
