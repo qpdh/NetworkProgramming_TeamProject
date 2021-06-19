@@ -139,9 +139,6 @@ int main() {
 
 		send(hClntSock, "접속 성공", 10, 0);
 
-		//cout << "현재 접속자 수 : " << vectorSOCKET.size()+1 << endl;
-		//PrintRoomInfo();
-
 		handleInfo = (LPPER_HANDLE_DATA)malloc(sizeof(PER_HANDLE_DATA));
 		handleInfo->hClntSock = hClntSock;
 		memcpy(&(handleInfo->clntAdr), &clntAdr, addrLen);
@@ -210,7 +207,6 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 			}
 
 			// 송신자를 제외한 모두에게 보내기
-			//char* charMessageFromClient = new char[ioInfo->wsaBuf.len];
 			char* charMessageFromClient = new char[strlen(ioInfo->buffer)];
 			strcpy(charMessageFromClient, ioInfo->buffer);
 			free(ioInfo);
@@ -304,7 +300,6 @@ DWORD WINAPI EchoThreadMain(LPVOID pComPort) {
 			WSARecv(sock, &(ioInfo->wsaBuf), 1, NULL, &flags, &(ioInfo->overlapped), NULL);
 		}
 		else {
-			//puts("message sent!");
 			free(ioInfo);
 		}
 
@@ -316,6 +311,7 @@ void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer)
 
 	/////////////임계영역////////////
 	EnterCriticalSection(&cs);
+
 	for (int i = 0; i < socketVector.size(); i++) {
 		if (memcmp(&sock, &socketVector.at(i), sizeof(SOCKET)) != 0) {
 			LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
@@ -328,6 +324,7 @@ void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer)
 
 		}
 	}
+
 	LeaveCriticalSection(&cs);
 	//////////////////////////////////////
 }
@@ -335,7 +332,7 @@ void SendMessageOtherClients(SOCKET sock, DWORD bytesTrans, char* messageBuffer)
 // 송신자를 포함한 모든 클라이언트에게 보내기
 void SendMessageAllClients(DWORD bytesTrans, char* messageBuffer) {
 
-		/////////////임계영역////////////
+	/////////////임계영역////////////
 	EnterCriticalSection(&cs);
 	for (int i = 0; i < socketVector.size(); i++) {
 		LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
@@ -363,7 +360,6 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 		ioInfo->wsaBuf.len = strlen(msg);
 		ioInfo->wsaBuf.buf = msg;
 		WSASend(sock, &(ioInfo->wsaBuf), 1, NULL, 0, &(ioInfo->overlapped), NULL);
-		//exit(1);
 	}
 	else if (commandSplit.at(0) == "/ready") { // 준비
 
@@ -514,7 +510,7 @@ void commandCompare(SOCKET sock, vector<string> commandSplit) {
 void PrintCommand(SOCKET sock) {
 	LPPER_IO_DATA ioInfo = (LPPER_IO_DATA)malloc(sizeof(PER_IO_DATA));
 	memset(&(ioInfo->overlapped), 0, sizeof(OVERLAPPED));
-	char msg[] = "/help : 명령어 설명\n/ready : 입장한 방에서 준비\n/start : 모두가 준비된 상태에서 시작\n";
+	char msg[] = "/help : 명령어 설명\n/ready : 입장한 방에서 준비\n/unready : 준비 해제\n/start : 모두가 준비된 상태에서 시작\n";
 
 	ioInfo->wsaBuf.len = strlen(msg);
 	ioInfo->wsaBuf.buf = msg;
